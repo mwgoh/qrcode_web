@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!.env.example
+
+# 로컬 전용 에이전트 설정
+.claude/settings.local.json
+
+# 앱에서 내려받은 QR/로고 테스트 이미지. 실제 정적 자산은 public/ 아래에 둔다.
+/*.png
