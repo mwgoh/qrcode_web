@@ -9,6 +9,7 @@ QR 코드 생성기입니다. 회원가입·로그인·로그아웃과 사용자
 - **디자인 커스터마이징** — 전경/배경색, 크기, 여백, 오류 보정 수준(L/M/Q/H), 가운데 로고
 - **PNG · SVG 내려받기**
 - **계정 인증** — 이메일/비밀번호 회원가입, 로그인, 로그아웃 (Supabase Auth)
+- **비밀번호 재설정** — 로그인 화면에서 메일로 링크를 받아 새 비밀번호 설정
 - **내 기록** — 저장·이름 변경·삭제, 저장된 설정 그대로 다시 불러와 편집
 
 ## 기술 스택
@@ -70,6 +71,28 @@ URL 전체를 glob으로 맞추기 때문에 `.../auth/confirm`만 넣으면 매
 ```html
 <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">Confirm email address</a>
 ```
+
+비밀번호 재설정 메일은 Authentication → Email Templates의 **Reset Password**를 아래처럼
+바꿉니다.
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password">비밀번호 재설정</a>
+```
+
+여기서 `{{ .RedirectTo }}` 대신 `{{ .SiteURL }}`에 경로를 직접 붙이는 이유가 있습니다.
+코드가 넘긴 redirect_to 값이 Redirect URLs allow list에 걸리면 `{{ .RedirectTo }}`는
+**빈 문자열로 렌더**되고, 그러면 링크가 `&token_hash=...` 같은 호스트 없는 상대 URL이 되어
+메일 앱에서 열리지 않습니다. `{{ .SiteURL }}`은 대시보드 설정값이라 항상 채워집니다.
+
+> **링크는 메일을 연 기기에서 열립니다.** `NEXT_PUBLIC_SITE_URL`이 `http://localhost:3000`인
+> 동안에는 개발 PC에서만 열 수 있습니다. 휴대폰에서 누르면 그 휴대폰의 localhost를 찾기
+> 때문에 반드시 접속에 실패합니다. 휴대폰으로 테스트하려면 PC의 LAN 주소
+> (예: `http://192.168.0.10:3000`)를 `NEXT_PUBLIC_SITE_URL`·Site URL·Redirect URLs 세 곳에
+> 넣고 `npm run dev -- -H 0.0.0.0`으로 띄우거나, Vercel 배포본에서 테스트하세요.
+
+> 재설정 링크를 확인하면 Supabase가 **정식 세션을 만들어 줍니다.** 링크를 가진 사람은 곧
+> 계정에 들어올 수 있다는 뜻이므로, 유효시간(Authentication → Email, 기본 1시간)을 필요
+> 이상으로 늘리지 마세요.
 
 ### 4. 개발 서버
 

@@ -54,7 +54,14 @@ export async function GET(request: NextRequest) {
     if (!error) return NextResponse.redirect(done);
   }
 
+  // 실패 안내는 어떤 링크였는지에 맞춘다. 비밀번호 재설정으로 가던 길이면 가입 확인이
+  // 아니라 재설정을 다시 요청하라고 알려줘야 한다.
+  const failure =
+    type === "recovery" || next.startsWith("/reset-password")
+      ? "reset"
+      : "confirm";
+
   return NextResponse.redirect(
-    new URL("/login?error=confirm", request.nextUrl.origin),
+    new URL(`/login?error=${failure}`, request.nextUrl.origin),
   );
 }

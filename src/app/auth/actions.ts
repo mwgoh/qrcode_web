@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 
 import { z } from "zod";
 
-import { authErrorMessage, signInErrorMessage } from "@/lib/auth-errors";
+import {
+  authErrorMessage,
+  isRateLimited,
+  signInErrorMessage,
+} from "@/lib/auth-errors";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
@@ -28,6 +32,9 @@ const password = z
     "영문과 숫자를 모두 포함해야 합니다.",
   );
 
+/** 재설정 메일 링크가 최종적으로 도착할 앱 내부 경로. */
+const RESET_PATH = "/reset-password";
+
 const signUpSchema = z.object({
   email,
   password,
@@ -41,6 +48,18 @@ const signInSchema = z.object({
   password: z.string().min(1, "비밀번호를 입력하세요.").max(72),
   next: z.string().optional(),
 });
+
+const resetRequestSchema = z.object({ email });
+
+const updatePasswordSchema = z
+  .object({
+    password,
+    passwordConfirm: z.string().min(1, "비밀번호를 한 번 더 입력하세요."),
+  })
+  .refine((value) => value.password === value.passwordConfirm, {
+    message: "비밀번호가 일치하지 않습니다.",
+    path: ["passwordConfirm"],
+  });
 
 function flatten(error: z.ZodError): Record<string, string> {
   const fieldErrors: Record<string, string> = {};
@@ -130,4 +149,84 @@ export async function signOutAction() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+/**
+ * 비밀번호 재설정 링크를 메일로 보낸다.
+ *
+ * 보안: 결과 문구로 계정 존재 여부를 드러내지 않는다(계정 열거). 주소가 가입돼 있든
+ * 아니든, 발송이 실패했든 같은 안내를 돌려주고 계정과 무관한 요청 한도 초과만 예외로 둔다.
+ */
+export async function requestPasswordResetAction(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = resetRequestSchema.safeParse({ email: formData.get("email") });
+
+  if (!parsed.success) {
+    return { fieldErrors: flatten(parsed.error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    parsed.data.email,
+    {
+      // 링크가 돌아올 주소. 환경변수 기반이라 호스트 헤더로 조작할 수 없다.
+      redirectTo: `${getSiteUrl()}/auth/confirm?next=${encodeURIComponent(RESET_PATH)}`,
+    },
+  );
+
+  if (isRateLimited(error)) {
+    return { error: authErrorMessage(error) };
+  }
+
+  return {
+    notice:
+      "입력하신 주소로 재설정 링크를 보냈습니다. 메일함에서 링크를 눌러 새 비밀번호를 설정해 주세요.",
+  };
+}
+
+/**
+ * 새 비밀번호를 저장한다.
+ *
+ * 재설정 링크를 확인하면 Supabase가 정식 세션을 만들어 주므로, 이 액션은 그 세션으로
+ * 본인 비밀번호만 바꾼다. 세션이 유효한지는 쿠키를 믿지 않고 `getUser()`로 확인한다.
+ */
+export async function updatePasswordAction(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = updatePasswordSchema.safeParse({
+    password: formData.get("password"),
+    passwordConfirm: formData.get("passwordConfirm"),
+  });
+
+  if (!parsed.success) {
+    return { fieldErrors: flatten(parsed.error) };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error:
+        "재설정 링크가 만료됐거나 유효하지 않습니다. 비밀번호 재설정을 다시 요청해 주세요.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    return { error: authErrorMessage(error) };
+  }
+
+  revalidatePath("/", "layout");
+  return {
+    notice: "비밀번호를 변경했습니다. 다음 로그인부터 새 비밀번호를 사용하세요.",
+  };
 }

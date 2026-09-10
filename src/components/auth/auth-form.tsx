@@ -3,13 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import {
   signInAction,
   signUpAction,
   type AuthFormState,
 } from "@/app/auth/actions";
+import { FieldError, FormFeedback } from "@/components/auth/auth-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,15 +18,6 @@ import { Label } from "@/components/ui/label";
 type Mode = "login" | "signup";
 
 const INITIAL: AuthFormState = {};
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <p className="text-xs text-destructive" role="alert">
-      {message}
-    </p>
-  );
-}
 
 export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   const isSignup = mode === "signup";
@@ -38,25 +30,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
 
-      {state.error ? (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>{state.error}</span>
-        </div>
-      ) : null}
-
-      {state.notice ? (
-        <div
-          role="status"
-          className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground"
-        >
-          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-          <span>{state.notice}</span>
-        </div>
-      ) : null}
+      <FormFeedback error={state.error} notice={state.notice} />
 
       {isSignup ? (
         <div className="space-y-1.5">
@@ -88,7 +62,17 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="password">비밀번호</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="password">비밀번호</Label>
+          {isSignup ? null : (
+            <Link
+              href="/forgot-password"
+              className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              비밀번호를 잊으셨나요?
+            </Link>
+          )}
+        </div>
         <Input
           id="password"
           name="password"

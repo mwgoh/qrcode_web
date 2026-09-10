@@ -20,6 +20,8 @@ const FALLBACK = "요청을 처리하지 못했습니다. 잠시 후 다시 시�
 
 const RATE_LIMITED = "요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.";
 
+const EXPIRED_LINK = "링크가 만료됐습니다. 다시 요청해 주세요.";
+
 const MESSAGES: Record<string, string> = {
   // 발송·요청 한도
   over_email_send_rate_limit:
@@ -31,6 +33,7 @@ const MESSAGES: Record<string, string> = {
   email_address_invalid: "사용할 수 없는 이메일 주소입니다.",
   email_address_not_authorized: "이 이메일 주소로는 가입할 수 없습니다.",
   weak_password: "비밀번호가 너무 단순합니다. 다른 비밀번호로 만들어 주세요.",
+  same_password: "기존 비밀번호와 같습니다. 다른 비밀번호로 바꿔 주세요.",
   validation_failed: "입력값을 확인해 주세요.",
 
   // 계정 상태.
@@ -45,16 +48,39 @@ const MESSAGES: Record<string, string> = {
   email_provider_disabled: "이메일 회원가입이 비활성화되어 있습니다.",
   provider_disabled: "현재 이 로그인 방식은 쓸 수 없습니다.",
 
-  // 링크·토큰
-  otp_expired: "링크가 만료됐습니다. 다시 요청해 주세요.",
+  // 링크·토큰·세션
+  otp_expired: EXPIRED_LINK,
+  session_not_found: EXPIRED_LINK,
+  session_expired: EXPIRED_LINK,
   flow_state_expired: "인증 절차가 만료됐습니다. 처음부터 다시 시도해 주세요.",
   flow_state_not_found:
     "인증 정보를 찾을 수 없습니다. 처음부터 다시 시도해 주세요.",
+  // 링크를 요청한 브라우저가 아니어서 PKCE 코드 검증자 쿠키가 없는 경우.
+  bad_code_verifier:
+    "이 브라우저에서는 링크를 확인할 수 없습니다. 같은 브라우저에서 다시 요청해 주세요.",
+  reauthentication_needed:
+    "보안을 위해 다시 인증해야 합니다. 메일로 받은 링크를 새로 요청해 주세요.",
 
   // 기타
   captcha_failed: "보안 문자 확인에 실패했습니다.",
   request_timeout: "요청 시간이 초과됐습니다. 다시 시도해 주세요.",
 };
+
+/**
+ * 계정과 무관한 "요청 한도 초과"인지 판단한다.
+ *
+ * 목록에 없는 코드라도 429면 한도 초과가 확실하다. 이 판단만은 계정 존재 여부를
+ * 드러내지 않으므로, 원인을 감추는 흐름(로그인·비밀번호 재설정 요청)에서도 예외로 노출한다.
+ */
+export function isRateLimited(error: AuthErrorLike | null | undefined): boolean {
+  if (!error) return false;
+  return (
+    error.status === 429 ||
+    error.code === "over_request_rate_limit" ||
+    error.code === "over_email_send_rate_limit" ||
+    error.code === "over_sms_send_rate_limit"
+  );
+}
 
 export function authErrorMessage(
   error: AuthErrorLike | null | undefined,
@@ -64,8 +90,7 @@ export function authErrorMessage(
   const mapped = error.code ? MESSAGES[error.code] : undefined;
   if (mapped) return mapped;
 
-  // 목록에 없는 코드라도 429면 한도 초과가 확실하다.
-  if (error.status === 429) return RATE_LIMITED;
+  if (isRateLimited(error)) return RATE_LIMITED;
 
   return FALLBACK;
 }
@@ -80,8 +105,6 @@ export function authErrorMessage(
 export function signInErrorMessage(
   error: AuthErrorLike | null | undefined,
 ): string {
-  if (error?.code === "over_request_rate_limit" || error?.status === 429) {
-    return RATE_LIMITED;
-  }
+  if (isRateLimited(error)) return RATE_LIMITED;
   return "이메일 또는 비밀번호가 올바르지 않습니다.";
 }

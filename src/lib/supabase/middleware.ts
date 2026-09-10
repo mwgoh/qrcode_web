@@ -7,8 +7,14 @@ import { supabaseEnv } from "./env";
 /** 로그인해야 접근 가능한 경로 프리픽스. */
 const PROTECTED_PREFIXES = ["/generate", "/history", "/account"];
 
-/** 이미 로그인한 사용자는 다시 볼 필요 없는 경로. */
-const AUTH_ONLY_PREFIXES = ["/login", "/signup"];
+/**
+ * 이미 로그인한 사용자는 다시 볼 필요 없는 경로.
+ *
+ * `/reset-password`는 어느 목록에도 넣지 않는다. 재설정 링크를 확인하면 세션이 생기므로
+ * 여기에 넣으면 정작 본인이 못 들어가고, 반대로 PROTECTED에 넣으면 미들웨어가 먼저
+ * 로그인으로 돌려보내 "링크가 만료됐다"는 안내가 사라진다. 해당 검사는 페이지가 직접 한다.
+ */
+const AUTH_ONLY_PREFIXES = ["/login", "/signup", "/forgot-password"];
 
 function matches(pathname: string, prefixes: string[]) {
   return prefixes.some(
