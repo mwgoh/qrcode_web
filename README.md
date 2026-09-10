@@ -169,13 +169,16 @@ Node 버전은 [`package.json`](package.json)의 `engines`로 `22.x`에 고정�
 ```
 src/
 ├─ app/
-│  ├─ (auth)/            로그인·회원가입 (비로그인 전용)
+│  ├─ (auth)/            로그인·회원가입·비밀번호 재설정
 │  ├─ (app)/             생성·기록 (로그인 필수) + QR 서버 액션
-│  ├─ auth/              인증 서버 액션, 이메일 확인 라우트
+│  ├─ auth/              인증 서버 액션, 메일 링크 확인 라우트
 │  ├─ layout.tsx         폰트·테마·토스트
-│  └─ page.tsx           랜딩
+│  ├─ page.tsx           랜딩
+│  ├─ not-found.tsx      404
+│  ├─ error.tsx          예외 경계
+│  └─ global-error.tsx   루트 레이아웃이 무너졌을 때
 ├─ components/
-│  ├─ auth/              로그인·회원가입 폼
+│  ├─ auth/              로그인·회원가입·재설정 폼
 │  ├─ qr/                QR 스튜디오, 기록 목록
 │  └─ ui/                shadcn/ui 컴포넌트
 ├─ lib/

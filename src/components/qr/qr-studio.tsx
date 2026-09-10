@@ -204,12 +204,14 @@ export function QrStudio({
     };
   }, [payload, options, logoPreview]);
 
-  // 브라우저에서 만든 objectURL은 반드시 해제한다.
+  // 브라우저에서 만든 objectURL은 반드시 해제한다. 해제 시점은 미리보기 URL이 바뀔 때뿐이므로
+  // logoFile을 의존성에 넣지 않는다. 넣으면 저장 직후 setLogoFile(null) 때 아직 미리보기가
+  // 쓰고 있는 URL이 해제돼, 옵션을 건드리는 순간 로고가 사라진다.
   React.useEffect(() => {
-    if (!logoFile || !logoPreview?.startsWith("blob:")) return;
+    if (!logoPreview?.startsWith("blob:")) return;
     const url = logoPreview;
     return () => URL.revokeObjectURL(url);
-  }, [logoFile, logoPreview]);
+  }, [logoPreview]);
 
   function handleLogoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
