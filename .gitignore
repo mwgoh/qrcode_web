@@ -46,3 +46,9 @@ next-env.d.ts
 
 # 앱에서 내려받은 QR/로고 테스트 이미지. 실제 정적 자산은 public/ 아래에 둔다.
 /*.png
+
+# 에이전트 스킬 문서 (npx skills add 로 내려받는 영문 참고 문서, 전부 .md).
+# node_modules처럼 skills-lock.json으로 재현 가능한 설치 산출물이라 저장소에는 안 담는다.
+# .claude/skills 는 .agents/skills 를 가리키는 심볼릭 링크라 실제 내용은 하나뿐이었다.
+/.agents/
+/.claude/skills/
