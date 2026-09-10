@@ -32,23 +32,48 @@ export type HistoryItem = {
 function Thumbnail({ content, options }: { content: string; options: unknown }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
+  // 기록이 수백 개면 화면 밖 썸네일까지 전부 인코딩하느라 목록이 눈에 띄게 버벅인다.
+  // 뷰포트에 들어온 것만 그린다. 그리기 전까지는 bg-muted가 자리를 채우고, QR이 캔버스
+  // 전체를 배경색으로 덮으므로 그린 뒤에는 가려진다.
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const parsed = qrOptionsSchema.safeParse(options);
     const base = parsed.success ? parsed.data : DEFAULT_OPTIONS;
+
     // 썸네일은 작게, 로고 없이 그린다.
-    void drawQr(canvas, {
-      payload: content,
-      options: { ...base, size: 160, logoScale: 0.2 },
-      logoSrc: null,
-    }).catch(() => undefined);
+    const draw = () => {
+      void drawQr(canvas, {
+        payload: content,
+        options: { ...base, size: 160, logoScale: 0.2 },
+        logoSrc: null,
+      }).catch(() => undefined);
+    };
+
+    if (typeof IntersectionObserver === "undefined") {
+      draw();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        draw();
+      },
+      // 스크롤이 닿기 전에 미리 그려 두면 빈 칸이 보이지 않는다.
+      { rootMargin: "300px" },
+    );
+
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, [content, options]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="size-20 shrink-0 rounded-lg border border-border"
+      className="size-20 shrink-0 rounded-lg border border-border bg-muted"
       aria-hidden
     />
   );

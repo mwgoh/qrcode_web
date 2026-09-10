@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import { z } from "zod";
 
-import { QR_KIND_LABELS, buildPayload, saveQrSchema } from "@/lib/qr/schema";
+import {
+  QR_KIND_LABELS,
+  QR_QUOTA,
+  buildPayload,
+  saveQrSchema,
+} from "@/lib/qr/schema";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/types/database";
 
@@ -67,12 +72,26 @@ export async function saveQrCodeAction(input: unknown): Promise<ActionResult> {
     .single();
 
   if (error || !data) {
+    // 할당량 초과는 트리거가 check_violation(23514)으로 던진다. 예외 문구를 그대로
+    // 비교하면 문구를 손보는 순간 조용히 깨지므로, 코드로 거른 뒤 실제로 상한에
+    // 닿았는지 세어 확인한다(다른 check 제약도 같은 코드로 오기 때문).
+    if (error?.code === "23514") {
+      const { count } = await supabase
+        .from("qr_codes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      if ((count ?? 0) >= QR_QUOTA) {
+        return {
+          ok: false,
+          error: `저장할 수 있는 QR 코드는 최대 ${QR_QUOTA}개입니다.`,
+        };
+      }
+    }
+
     return {
       ok: false,
-      error:
-        error?.message.includes("최대 300개") === true
-          ? "저장할 수 있는 QR 코드는 최대 300개입니다."
-          : "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      error: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     };
   }
 

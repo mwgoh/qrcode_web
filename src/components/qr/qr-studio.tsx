@@ -609,6 +609,8 @@ export function QrStudio({
                 </span>
               </div>
               <Slider
+                thumbLabel="크기"
+                formatValueText={(value) => `${value}픽셀`}
                 min={128}
                 max={1024}
                 step={32}
@@ -630,6 +632,8 @@ export function QrStudio({
                 </span>
               </div>
               <Slider
+                thumbLabel="여백"
+                formatValueText={(value) => `${value}칸`}
                 min={0}
                 max={8}
                 step={1}
@@ -702,6 +706,8 @@ export function QrStudio({
                     </span>
                   </div>
                   <Slider
+                    thumbLabel="로고 크기"
+                    formatValueText={(value) => `${value}퍼센트`}
                     min={10}
                     max={30}
                     step={1}

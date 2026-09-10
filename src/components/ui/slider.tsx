@@ -1,14 +1,28 @@
 import { Slider as SliderPrimitive } from "@base-ui/react/slider"
 import { cn } from "cn"
 
+type SliderProps = SliderPrimitive.Root.Props & {
+  /**
+   * 스크린 리더가 읽을 슬라이더 이름.
+   *
+   * Base UI는 thumb 안의 `<input type="range">`에 role을 두고 `getAriaLabel`로만
+   * 이름을 받는다. 화면에 놓인 `<Label>`은 htmlFor로 연결할 대상이 없으므로 따로 준다.
+   */
+  thumbLabel?: string
+  /** 숫자만 읽으면 뜻이 통하지 않는 값에 단위를 붙인다(예: "512px"). */
+  formatValueText?: (value: number) => string
+}
+
 function Slider({
   className,
   defaultValue,
   value,
   min = 0,
   max = 100,
+  thumbLabel,
+  formatValueText,
   ...props
-}: SliderPrimitive.Root.Props) {
+}: SliderProps) {
   const _values = Array.isArray(value)
     ? value
     : Array.isArray(defaultValue)
@@ -40,6 +54,12 @@ function Slider({
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
+            getAriaLabel={thumbLabel ? () => thumbLabel : undefined}
+            getAriaValueText={
+              formatValueText
+                ? (_formatted, thumbValue) => formatValueText(thumbValue)
+                : undefined
+            }
             className="relative block size-3 shrink-0 rounded-full border border-ring bg-white ring-ring/50 transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
           />
         ))}

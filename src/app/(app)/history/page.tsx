@@ -7,6 +7,7 @@ import { QrCode } from "lucide-react";
 import { HistoryList, type HistoryItem } from "@/components/qr/history-list";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { QR_QUOTA } from "@/lib/qr/schema";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ export default async function HistoryPage() {
     .select("id, label, kind, content, options, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(300);
+    .limit(QR_QUOTA);
 
   const items: HistoryItem[] = (data ?? []).map((row) => ({
     id: row.id,

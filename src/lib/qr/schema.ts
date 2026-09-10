@@ -25,6 +25,14 @@ export const QR_KIND_LABELS: Record<QrKind, string> = {
 /** QR 심볼 하나에 안전하게 담을 수 있는 실질적 상한. */
 export const MAX_CONTENT_LENGTH = 1800;
 
+/**
+ * 계정당 저장 개수 상한.
+ *
+ * 실제 강제는 DB 트리거(`public.enforce_qr_quota`)가 한다. 이 상수는 화면 문구와
+ * 목록 조회 상한을 맞추기 위한 사본이므로, 마이그레이션의 값과 함께 고쳐야 한다.
+ */
+export const QR_QUOTA = 300;
+
 const hexColor = z
   .string()
   .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "‘#1DA1F2’ 형식이어야 합니다.");
